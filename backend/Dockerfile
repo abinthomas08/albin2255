@@ -4,18 +4,17 @@ FROM node:18-alpine
 # Set the working directory inside the container
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json first to leverage Docker cache
+# Copy dependency files
 COPY package*.json ./
 
-# Install application dependencies
-RUN npm install --production
+# Install dependencies
+RUN npm install
 
-# Copy the rest of the application code
+# Copy the rest of the backend code
 COPY . .
 
-# Expose the port the app runs on (Default for Express is usually 3000 or 5000)
-# Make sure this matches the port in your backend code (e.g., server.js)
+# Expose backend port
 EXPOSE 8080
 
-# Command to run the application
+# Start the server
 CMD ["node", "server.js"]
