@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mean-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - mean-network
+
+  backend:
+    build: ./backend
+    # REPLACE 'yourusername' WITH YOUR ACTUAL DOCKER HUB USERNAME
+    image: yourusername/mean-backend:latest 
+    container_name: mean-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - MONGODB_URI=mongodb://mean-mongo:27017/mean-db
+    depends_on:
+      - mongodb
+    networks:
+      - mean-network
+
+  frontend:
+    build: ./frontend
+    # REPLACE 'yourusername' WITH YOUR ACTUAL DOCKER HUB USERNAME
+    image: yourusername/mean-frontend:latest
+    container_name: mean-frontend
+    networks:
+      - mean-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: mean-nginx-proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - mean-network
+
+volumes:
+  mongo-data:
+
+networks:
+  mean-network:
+    driver: bridge
