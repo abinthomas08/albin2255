@@ -22,7 +22,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Build & Push Backend image
+      # Build & Push Backend
       - name: Build backend image
         uses: docker/build-push-action@v5
         with:
@@ -32,7 +32,7 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/mean-backend:latest
 
-      # Build & Push Frontend image
+      # Build & Push Frontend
       - name: Build frontend image
         uses: docker/build-push-action@v5
         with:
@@ -43,26 +43,14 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/mean-frontend:latest
 
   # --------------------------
-  # 2) DEPLOY TO EC2
+  # 2) DEPLOY ON EC2
   # --------------------------
   deploy-to-ec2:
     needs: build-and-push
     runs-on: ubuntu-latest
 
     steps:
-
-      # Upload docker-compose.yml
-      - name: Upload docker-compose.yml to EC2
-        uses: appleboy/scp-action@v0.1.4
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_KEY }}
-          source: "docker-compose.yml"
-          target: "/home/ubuntu/"
-
-      # SSH and deploy
-      - name: SSH into EC2 & Deploy
+      - name: Deploy on EC2 via SSH
         uses: appleboy/ssh-action@v1.1.0
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -72,20 +60,30 @@ jobs:
             echo "🚧 Checking Docker installation..."
             if ! command -v docker &> /dev/null
             then
-                echo "Installing Docker..."
-                curl -fsSL https://get.docker.com | sudo sh
-                sudo usermod -aG docker ubuntu
+              curl -fsSL https://get.docker.com | sudo sh
+              sudo usermod -aG docker ubuntu
             fi
 
-            cd /home/ubuntu
+            echo "📁 Using /home/ubuntu/app as deployment directory..."
+            mkdir -p /home/ubuntu/app
 
-            echo "🐳 Pulling latest images from Docker Hub..."
+            cd /home/ubuntu/app
+
+            if [ ! -d .git ]; then
+              echo "📥 Cloning repository..."
+              git clone https://github.com/${{ secrets.REPO_OWNER }}/${{ secrets.REPO_NAME }}.git .
+            else
+              echo "🔄 Pulling updates..."
+              git pull origin main
+            fi
+
+            echo "🐳 Pulling new images from Docker Hub..."
             docker compose pull
 
             echo "🛑 Stopping old containers..."
             docker compose down
 
-            echo "🚀 Starting new containers..."
+            echo "🚀 Starting updated containers..."
             docker compose up -d
 
             echo "🎉 Deployment complete!"
