@@ -11,7 +11,7 @@ services:
       - "27017:27017"
 
   backend:
-    build: ./backend
+    image: abinthomas1/mean-backend:latest
     container_name: backend
     restart: always
     environment:
@@ -22,7 +22,7 @@ services:
       - "8080:8080"
 
   frontend:
-    build: ./frontend
+    image: abinthomas1/mean-frontend:latest
     container_name: frontend
     restart: always
     depends_on:
