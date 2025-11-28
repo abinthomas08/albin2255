@@ -1,28 +1,25 @@
-name: Build and Push Docker Images
+name: CI/CD - Build, Push, Deploy
 
 on:
   push:
     branches: ["main"]
-  pull_request:
-    branches: ["main"]
 
 jobs:
+
   build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout the code
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # Login to Docker Hub
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Build and push BACKEND
+      # Build & Push Backend
       - name: Build backend image
         uses: docker/build-push-action@v5
         with:
@@ -33,7 +30,7 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/mean-backend:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/mean-backend:${{ github.sha }}
 
-      # Build and push FRONTEND
+      # Build & Push Frontend
       - name: Build frontend image
         uses: docker/build-push-action@v5
         with:
@@ -43,3 +40,24 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/mean-frontend:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/mean-frontend:${{ github.sha }}
+
+  deploy-to-ec2:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: SSH into EC2 & Deploy
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            cd /home/ec2-user/app
+            echo "Pulling new Docker images..."
+            docker compose pull
+            echo "Stopping old containers..."
+            docker compose down
+            echo "Starting updated containers..."
+            docker compose up -d
+            echo "Deployment complete."
