@@ -53,11 +53,43 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
           script: |
-            cd /home/ec2-user/app
-            echo "Pulling new Docker images..."
+            echo "🔍 Checking if Docker is installed..."
+            if ! command -v docker &> /dev/null
+            then
+                echo "🚧 Installing Docker..."
+                curl -fsSL https://get.docker.com -o get-docker.sh
+                sudo sh get-docker.sh
+                sudo usermod -aG docker ubuntu
+            else
+                echo "✔ Docker already installed."
+            fi
+
+            echo "📁 Ensuring /home/ubuntu/app exists..."
+            mkdir -p /home/ubuntu/app
+            cd /home/ubuntu/app
+
+            echo "🔍 Checking if repo exists..."
+            if [ ! -d .git ]; then
+                echo "📥 Cloning repo for the first time..."
+                git clone https://github.com/${{ secrets.REPO_OWNER }}/{{ secrets.REPO_NAME }}.git .
+            else
+                echo "🔄 Repo exists — pulling latest changes..."
+                git pull origin main
+            fi
+
+            echo "📦 Checking for docker-compose.yml..."
+            if [ ! -f docker-compose.yml ]; then
+                echo "❌ ERROR: docker-compose.yml not found!"
+                exit 1
+            fi
+
+            echo "🐳 Pulling latest Docker images..."
             docker compose pull
-            echo "Stopping old containers..."
+
+            echo "🛑 Stopping old containers..."
             docker compose down
-            echo "Starting updated containers..."
+
+            echo "🚀 Starting updated containers..."
             docker compose up -d
-            echo "Deployment complete."
+
+            echo "🎉 Deployment complete!"
