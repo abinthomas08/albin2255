@@ -7,31 +7,66 @@ on:
 
 jobs:
 
-  # --------------------------
-  # 1) BUILD AND PUSH IMAGES
-  # --------------------------
-  gitleaks-scan:
-    name: Git leask scan
+   server-trivy-fs:
+    name: Server Trivy FS Scan
     runs-on: ubuntu-latest
+
+
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
-      - name : run git leak scan 
+
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@v0.2.6
+        with:
+          version: latest
+          cache: true
+
+      - name: Verify Trivy installation
         run: |
-          docker run --rm \
-          -v "${{ github.workspace }}:/repo" \
-          ghcr.io/gitleaks/gitleaks:latest detect \
-          --source=/repo \
-          --report-format=json \
-          --report-path=/repo/gitleaks-report.json \
-          --redact \
-          --exit-code 0
-      - name: upload artifact
+          trivy --version
+          which trivy
+        
+      - name: trivy image scanner
+        run : |
+          trivy image abinthomas1/retail-store-sample-ui \
+          --format table \
+          --severity HIGH,CRITICAL \
+          --ignore-unfixed \
+          --exit-code 0 > image-trivy-report.txt
+      - name : upload trivy image
         uses: actions/upload-artifact@v4
         with:
-            name: gitloeask-report
-            path: gitleaks-report.json
-            if-no-file-found: warn
+          name: trivy-image-scanner
+          path: trivy-scanner.txt
+          if-no-files-found: warn
+          
+  # --------------------------
+  # 1) BUILD AND PUSH IMAGES
+  # --------------------------
+  # gitleaks-scan:
+  #   name: Git leask scan
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout source code
+  #       uses: actions/checkout@v4
+  #     - name : run git leak scan 
+  #       run: |
+  #         docker run --rm \
+  #         -v "${{ github.workspace }}:/repo" \
+  #         ghcr.io/gitleaks/gitleaks:latest detect \
+  #         --source=/repo \
+  #         --report-format=json \
+  #         --report-path=/repo/gitleaks-report.json \
+  #         --redact \
+  #         --exit-code 0
+  #     - name: upload artifact
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #           name: gitloeask-report
+  #           path: gitleaks-report.json
+  #           if-no-file-found: warn
+            
             
   # build-and-push:
   #   runs-on: ubuntu-latest
