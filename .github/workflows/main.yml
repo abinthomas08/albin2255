@@ -26,6 +26,13 @@ jobs:
           --report-path=/repo/gitleaks-report.json \
           --redact \
           --exit-code 0
+      - name: upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+            name: gitloeask-report
+            path: gitleaks-report.json
+            if-no-file-found: warn
+            
   # build-and-push:
   #   runs-on: ubuntu-latest
 
