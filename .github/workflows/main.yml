@@ -19,7 +19,7 @@ jobs:
       - name : run git leak scan 
         run: |
           docker run --rm \
-          -v "${{github.workspace}}:/repo" \
+          -v "${{ github.workspace }}:/repo" \
           ghcr.io/gitleaks/gitleaks:latest detect \
           --source =/repo \
           --report-format=json \
