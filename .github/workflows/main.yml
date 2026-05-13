@@ -21,11 +21,11 @@ jobs:
           docker run --rm \
           -v "${{ github.workspace }}:/repo" \
           ghcr.io/gitleaks/gitleaks:latest detect \
-          --source =/repo \
-          --report-format=json \
-          --report-path =/repo/gitleaks-report.json \
+          --source=/repo\
+          --report-format=json\
+          --report-path=/repo/gitleaks-report.json \
           --redact \
-          -- exit-code 0
+          --exit-code 0
   # build-and-push:
   #   runs-on: ubuntu-latest
 
