@@ -1,148 +1,32 @@
-name: CI/CD - Build, Push, Deploy
-
-on:
+name: ci /cd
+on: 
   push:
-    branches: ["main"]
- 
+    branches:
+      - qa 
+    paths:
+      - .github/workflows/main.yml
 
 jobs:
-
-   server-trivy-fs:
-    name: Server Trivy FS Scan
+  gitleask-scan:
+    name: Git leak scan
     runs-on: ubuntu-latest
-
-
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
 
-      - name: Install Trivy
-        uses: aquasecurity/setup-trivy@v0.2.6
-        with:
-          version: latest
-          cache: true
-
-      - name: Verify Trivy installation
-        run: |
-          trivy --version
-          which trivy
-        
-      - name: trivy image scanner
-        run : |
-          trivy image abinthomas1/retail-store-sample-ui \
-          --format table \
-          --severity HIGH,CRITICAL \
-          --ignore-unfixed \
-          --exit-code 0 > image-trivy-report.txt
-      - name : upload trivy image
+      - name: Run Gitleask scan
+        run: | 
+          docker run --rm \
+            -v ${{ github.workspace }}:/repo" \
+            zricethezav/gitleaks:latest detect \ 
+            --source=/repo \
+            --report-format=json \
+            --report-path=/repo/gitleaks-report.json \ 
+            --redact \
+            --exit-code 0
+      - name: Upload gitleak scan report
         uses: actions/upload-artifact@v4
         with:
-          name: trivy-image-scanner
-          path: trivy-scanner.txt
-          if-no-files-found: warn
-          
-  # --------------------------
-  # 1) BUILD AND PUSH IMAGES
-  # --------------------------
-  # gitleaks-scan:
-  #   name: Git leask scan
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout source code
-  #       uses: actions/checkout@v4
-  #     - name : run git leak scan 
-  #       run: |
-  #         docker run --rm \
-  #         -v "${{ github.workspace }}:/repo" \
-  #         ghcr.io/gitleaks/gitleaks:latest detect \
-  #         --source=/repo \
-  #         --report-format=json \
-  #         --report-path=/repo/gitleaks-report.json \
-  #         --redact \
-  #         --exit-code 0
-  #     - name: upload artifact
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #           name: gitloeask-report
-  #           path: gitleaks-report.json
-  #           if-no-file-found: warn
-            
-            
-  # build-and-push:
-  #   runs-on: ubuntu-latest
-
-  #   steps:
-  #     - name: Checkout Repository
-  #       uses: actions/checkout@v4
-
-  #     - name: Login to Docker Hub
-  #       uses: docker/login-action@v3
-  #       with:
-  #         username: ${{ secrets.DOCKERHUB_USERNAME }}
-  #         password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-  #     # Build & Push Backend
-  #     - name: Build backend image
-  #       uses: docker/build-push-action@v5
-  #       with:
-  #         context: ./backend
-  #         file: ./backend/Dockerfile
-  #         push: true
-  #         tags: |
-  #           ${{ secrets.DOCKERHUB_USERNAME }}/mean-backend:latest
-
-  #     # Build & Push Frontend
-  #     - name: Build frontend image
-  #       uses: docker/build-push-action@v5
-  #       with:
-  #         context: ./frontend
-  #         file: ./frontend/Dockerfile
-  #         push: true
-  #         tags: |
-  #           ${{ secrets.DOCKERHUB_USERNAME }}/mean-frontend:latest
-
-  # --------------------------
-  # 2) DEPLOY ON EC2
-  # --------------------------
-  # deploy-to-ec2:
-  #   needs: build-and-push
-  #   runs-on: ubuntu-latest
-
-  #   steps:
-  #     - name: Deploy on EC2 via SSH
-  #       uses: appleboy/ssh-action@v1.1.0
-  #       with:
-  #         host: ${{ secrets.EC2_HOST }}
-  #         username: ${{ secrets.EC2_USER }}
-  #         key: ${{ secrets.EC2_KEY }}
-  #         script: |
-  #           echo "🚧 Checking Docker installation..."
-  #           if ! command -v docker &> /dev/null
-  #           then
-  #             curl -fsSL https://get.docker.com | sudo sh
-  #             sudo usermod -aG docker ubuntu
-  #           fi
-
-  #           echo "📁 Using /home/ubuntu/app as deployment directory..."
-  #           mkdir -p /home/ubuntu/app
-
-  #           cd /home/ubuntu/app
-
-  #           if [ ! -d .git ]; then
-  #             echo "📥 Cloning repository..."
-  #             git clone https://github.com/${{ secrets.REPO_OWNER }}/${{ secrets.REPO_NAME }}.git .
-  #           else
-  #             echo "🔄 Pulling updates..."
-  #             git pull origin main
-  #           fi
-
-  #           echo "🐳 Pulling new images from Docker Hub..."
-  #           docker compose pull
-
-  #           echo "🛑 Stopping old containers..."
-  #           docker compose down
-
-  #           echo "🚀 Starting updated containers..."
-  #           docker compose up -d
-
-  #           echo "🎉 Deployment complete!"
+          name: git-scan-report
+          path: gitleaks-report.json
+          if-no-file-found: warn
